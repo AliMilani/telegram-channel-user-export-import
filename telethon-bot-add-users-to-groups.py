@@ -11,27 +11,25 @@ import random
 import re
 import json
 
-credentials_file = "credentials.json" # Relative path of file which consists Telegram credentials - api_id, api_hash, phone
+def log_into_telegram():
+    credential_file = 'credentials.json' # Relative path of file which consists Telegram credentials - api_id, api_hash, phone
 
-# Login & Verification Code
-try:
-    credentials = json.load(open(credential_file, 'r'))
-except:
-    print("credentials.json File not present in the directory")
-    exit(1)
+    try:
+        credentials = json.load(open(credential_file, 'r'))
+    except:
+        print('credentials.json file not present in the directory')
+        exit(2)
 
-try:
-    client = TelegramClient(credentials['phone'], credentials['api_id'], credentials['api_hash'])
-    client.connect()
-except:
-    print("Could not create `TelegramClient`, please check your credentials in credentials.json")
-    exit(1)
+    try:
+        client = TelegramClient(credentials['phone'], credentials['api_id'], credentials['api_hash'])
+        client.connect()
+    except:
+        print('Could not create `TelegramClient`, please check your credentials in credentials.json')
+        exit(3)
 
-if not client.is_user_authorized():
-    client.send_code_request(credentials['phone'])
-    client.sign_in(credentials['phone'], input('Enter verification code: '))
+    return client
 
-def add_users_to_group():
+def add_users_to_group(client):
     input_file = sys.argv[1]
     users = []
     with open(input_file, encoding='UTF-8') as f:
@@ -111,7 +109,7 @@ def add_users_to_group():
                 sys.exit('too many errors')
             continue
 
-def list_users_in_group():
+def list_users_in_group(client):
     chats = []
     last_date = None
     chunk_size = 200
@@ -186,6 +184,7 @@ def printCSV():
             print(user)
     sys.exit('FINITO')
 
+
 # print('Fetching Members...')
 # all_participants = []
 # all_participants = client.get_participants(target_group, aggressive=True)
@@ -193,8 +192,10 @@ print('What do you want to do:')
 mode = int(input("Enter \n1-List users in a group\n2-Add users from CSV to Group (CSV must be passed as a parameter to the script\n3-Show CSV\n\nYour option:  "))
 
 if mode == 1:
-    list_users_in_group()
+    client = log_into_telegram()
+    list_users_in_group(client)
 elif mode == 2:
-    add_users_to_group()
+    client = log_into_telegram()
+    add_users_to_group(client)
 elif mode == 3:
     printCSV()
