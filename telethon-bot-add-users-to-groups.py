@@ -9,17 +9,27 @@ import traceback
 import time
 import random
 import re
+import json
 
+credentials_file = "credentials.json" # Relative path of file which consists Telegram credentials - api_id, api_hash, phone
 
-api_id = 000000        # YOUR API_ID
-api_hash = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'        # YOUR API_HASH
-phone = '+34000000000'        # YOUR PHONE NUMBER, INCLUDING COUNTRY CODE
-client = TelegramClient(phone, api_id, api_hash)
+# Login & Verification Code
+try:
+    credentials = json.load(open(credential_file, 'r'))
+except:
+    print("credentials.json File not present in the directory")
+    exit(1)
 
-client.connect()
+try:
+    client = TelegramClient(credentials['phone'], credentials['api_id'], credentials['api_hash'])
+    client.connect()
+except:
+    print("Could not create `TelegramClient`, please check your credentials in credentials.json")
+    exit(1)
+
 if not client.is_user_authorized():
-    client.send_code_request(phone)
-    client.sign_in(phone, input('Enter the code: '))
+    client.send_code_request(credentials['phone'])
+    client.sign_in(credentials['phone'], input('Enter verification code: '))
 
 def add_users_to_group():
     input_file = sys.argv[1]
