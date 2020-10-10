@@ -25,7 +25,7 @@ def add_users_to_group():
     input_file = sys.argv[1]
     users = []
     with open(input_file, encoding='UTF-8') as f:
-        rows = csv.reader(f,delimiter=",",lineterminator="\n")
+        rows = csv.reader(f, delimiter=",", lineterminator="\n")
         next(rows, None)
         for row in rows:
             user = {}
@@ -40,8 +40,8 @@ def add_users_to_group():
     #random.shuffle(users)
     chats = []
     last_date = None
-    chunk_size = 10
-    groups=[]
+    chunk_size = 200 # No of latest chats to load
+    groups = []
 
     result = client(GetDialogsRequest(
                 offset_date=last_date,
@@ -54,7 +54,7 @@ def add_users_to_group():
 
     for chat in chats:
         try:
-            if chat.megagroup== True: # CONDITION TO ONLY LIST MEGA GROUPS.
+            if chat.megagroup == True: # CONDITION TO ONLY LIST MEGA GROUPS.
                 groups.append(chat)
         except:
             continue
@@ -63,13 +63,13 @@ def add_users_to_group():
     i=0
     for group in groups:
         print(str(i) + '- ' + group.title)
-        i+=1
+        i += 1
 
     g_index = input("Enter a Number: ")
     target_group=groups[int(g_index)]
     print('\n\nGrupo elegido:\t' + groups[int(g_index)].title)
 
-    target_group_entity = InputPeerChannel(target_group.id,target_group.access_hash)
+    target_group_entity = InputPeerChannel(target_group.id, target_group.access_hash)
 
     mode = int(input("Enter 1 to add by username or 2 to add by ID: "))
 
@@ -128,7 +128,7 @@ def list_users_in_group():
     i=0
     for g in groups:
         print(str(i) + '- ' + g.title)
-        i+=1
+        i += 1
     
     g_index = input("Enter a Number: ")
     target_group=groups[int(g_index)]
