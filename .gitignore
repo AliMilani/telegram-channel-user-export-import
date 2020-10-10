@@ -3,3 +3,4 @@
 
 # application
 credentials.json
+*.session
