@@ -29,6 +29,30 @@ def log_into_telegram():
 
     return client
 
+def select_group():
+    chats = []
+    last_date = None
+    chunk_size = 200
+
+    result = client(GetDialogsRequest(
+                offset_date=last_date,
+                offset_id=0,
+                offset_peer=InputPeerEmpty(),
+                limit=chunk_size,
+                hash = 0
+            ))
+    chats.extend(result.chats)
+
+    i = 0
+    for group in chats:
+        print(str(i) + '. ' + group.title)
+        i += 1
+
+    g_index = int(input("Choose group: "))
+    target_group = chats[g_index]
+    print('\n\nChosen group: ' + target_group.title)
+    return target_group
+
 def add_users_to_group(client):
     input_file = sys.argv[1]
     users = []
@@ -46,37 +70,8 @@ def add_users_to_group(client):
             users.append(user)
 
     #random.shuffle(users)
-    chats = []
-    last_date = None
-    chunk_size = 200 # No of latest chats to load
-    groups = []
 
-    result = client(GetDialogsRequest(
-                offset_date=last_date,
-                offset_id=0,
-                offset_peer=InputPeerEmpty(),
-                limit=chunk_size,
-                hash = 0
-            ))
-    chats.extend(result.chats)
-
-    for chat in chats:
-        try:
-            if chat.megagroup == True: # CONDITION TO ONLY LIST MEGA GROUPS.
-                groups.append(chat)
-        except:
-            continue
-
-    print('Choose a group to add members:')
-    i=0
-    for group in groups:
-        print(str(i) + '- ' + group.title)
-        i += 1
-
-    g_index = input("Enter a Number: ")
-    target_group=groups[int(g_index)]
-    print('\n\nGrupo elegido:\t' + groups[int(g_index)].title)
-
+    target_group = select_group()
     target_group_entity = InputPeerChannel(target_group.id, target_group.access_hash)
 
     mode = int(input("Enter 1 to add by username or 2 to add by ID: "))
@@ -110,39 +105,7 @@ def add_users_to_group(client):
             continue
 
 def list_users_in_group(client):
-    chats = []
-    last_date = None
-    chunk_size = 200
-    groups=[]
-    
-    result = client(GetDialogsRequest(
-                offset_date=last_date,
-                offset_id=0,
-                offset_peer=InputPeerEmpty(),
-                limit=chunk_size,
-                hash = 0
-            ))
-    chats.extend(result.chats)
-    
-    for chat in chats:
-        try:
-            print(chat)
-            groups.append(chat)
-            # if chat.megagroup== True:
-        except:
-            continue
-    
-    print('Choose a group to scrape members from:')
-    i=0
-    for g in groups:
-        print(str(i) + '- ' + g.title)
-        i += 1
-    
-    g_index = input("Enter a Number: ")
-    target_group=groups[int(g_index)]
-
-    print('\n\nGrupo elegido:\t' + groups[int(g_index)].title)
-    
+    target_group = select_group()
     print('Fetching Members...')
     all_participants = []
     all_participants = client.get_participants(target_group, aggressive=True)
