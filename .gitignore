@@ -4,3 +4,4 @@
 # application
 credentials.json
 *.session
+*members*.csv

@@ -105,17 +105,19 @@ def add_users_to_group(client):
                 sys.exit('too many errors')
             continue
 
-def list_users_in_group(client):
-    target_group = select_group()
-    print('Fetching Members...')
-    all_participants = []
-    all_participants = client.get_participants(target_group, aggressive=True)
-    
-    print('Saving In file...')
-    with open("members-" + re.sub("-+","-",re.sub("[^a-zA-Z]","-",str.lower(target_group.title))) + ".csv","w",encoding='UTF-8') as f:
+def scrape_users(target_group, client):
+    print('Scraping Members from', target_group.title)
+
+    sanitized_group_name = re.sub(' ', '-', str.lower(target_group.title).encode('ascii', 'ignore').decode('ascii').strip())
+    if sanitized_group_name:
+        members_file_name = sanitized_group_name + '-members.csv'
+    else:
+        members_file_name = 'group-members.csv'
+
+    with open(members_file_name, 'w', encoding='UTF-8') as f:
         writer = csv.writer(f,delimiter=",",lineterminator="\n")
         writer.writerow(['username','user id', 'access hash','name','group', 'group id'])
-        for user in all_participants:
+        for user in client.iter_participants(int(target_group.id)):
             if user.username:
                 username= user.username
             else:
@@ -157,7 +159,8 @@ mode = int(input("Enter \n1-List users in a group\n2-Add users from CSV to Group
 
 if mode == 1:
     client = log_into_telegram()
-    list_users_in_group(client)
+    target_group = select_group()
+    scrape_users(target_group, client)
 elif mode == 2:
     client = log_into_telegram()
     add_users_to_group(client)
