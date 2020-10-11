@@ -1,6 +1,6 @@
 from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import GetDialogsRequest
-from telethon.tl.types import InputPeerEmpty, InputPeerChannel, InputPeerUser
+from telethon.tl.types import InputPeerEmpty, InputPeerChannel, InputPeerUser, ChatForbidden, ChannelForbidden
 from telethon.errors.rpcerrorlist import PeerFloodError, UserPrivacyRestrictedError
 from telethon.tl.functions.channels import InviteToChannelRequest
 import sys
@@ -33,20 +33,21 @@ def select_group():
     chats = []
     last_date = None
     chunk_size = 200
+    dialog_iterator = 0
 
-    result = client(GetDialogsRequest(
-                offset_date=last_date,
-                offset_id=0,
-                offset_peer=InputPeerEmpty(),
-                limit=chunk_size,
-                hash = 0
-            ))
-    chats.extend(result.chats)
+    for dialog in client.iter_dialogs(
+            offset_date=last_date,
+            offset_id=0,
+            offset_peer=InputPeerEmpty(),
+            limit=chunk_size,
+        ):
 
-    i = 0
-    for group in chats:
-        print(str(i) + '. ' + group.title)
-        i += 1
+        if dialog.is_group and dialog.is_channel and dialog.entity.megagroup:    # mega-group filter
+            if not isinstance(dialog.entity, ChatForbidden) and not isinstance(dialog.entity, ChannelForbidden):
+                print(str(dialog_iterator) + '. ' + dialog.entity.title)
+                chats.append(dialog.entity)
+                dialog_iterator += 1
+
 
     g_index = int(input("Choose group: "))
     target_group = chats[g_index]
