@@ -12,20 +12,29 @@ from telethon.tl.functions.messages import GetDialogsRequest, AddChatUserRequest
 from telethon.tl.types import InputPeerEmpty, Chat, InputPeerChat, ChatForbidden, Channel, InputPeerChannel, ChannelForbidden
 from telethon.errors.rpcerrorlist import PeerFloodError, InputUserDeactivatedError, UserNotMutualContactError, UserPrivacyRestrictedError
 
+# Set up logging
+import logging
+logger = logging.getLogger('telethon-add-users-to-groups')
+# logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+format = logging.Formatter('%(levelname)s | %(asctime)s | %(message)s')
+ch.setFormatter(format)
+logger.addHandler(ch)
+
 def log_into_telegram():
     credential_file = 'credentials.json' # Relative path of file which consists Telegram credentials - api_id, api_hash, phone
 
     try:
         credentials = json.load(open(credential_file, 'r'))
-    except:
-        print('credentials.json file not present in the directory')
+    except FileNotFoundError:
+        logger.error('credentials file not found')
         exit(2)
 
     try:
         client = TelegramClient(credentials['phone'], credentials['api_id'], credentials['api_hash'])
         client.connect()
-    except:
-        print('Could not create `TelegramClient`, please check your credentials in credentials.json')
+    except ConnectionError as e:
+        logger.error("%s: %s", e.__class__.__name__, e)
         exit(3)
 
     return client
@@ -53,10 +62,10 @@ def select_group():
         g_index = int(input("Choose group: "))
         target_group = chats[g_index]
     except IndexError as e:
-        print(e.__class__.__name__, e)
+        logger.error("%s: %s", e.__class__.__name__, e)
         exit(4)
     except ValueError:
-        print('ValueError: invalid literal')
+        logger.error('ValueError: invalid literal')
         exit(4)
 
     print('\n\nChosen group: ' + target_group.title)
@@ -75,7 +84,7 @@ def add_users_to_group(input_file, target_group, client):
         target_group_entity = InputPeerChannel(target_group.id, target_group.access_hash)
         isChannel = True
     else:
-        print(target_group.__class__.__name__, "is not a valid InputPeer")
+        logger.error("%s is not a valid InputPeer", target_group.__class__.__name__)
         exit(5)
 
     while not mode_set:
@@ -83,58 +92,74 @@ def add_users_to_group(input_file, target_group, client):
             print('Add By:\n1. username\n2. user ID ( requires access hash to be in CSV )')
             mode = int(input('How do you want to add users? '))
             mode_set = True
-        except ValueError:
-            print('ValueError: invalid literal\n')
+        except:
+            logger.error('ValueError: invalid literal \n')
             continue
 
         if mode not in [1, 2]:
-            print('Invalid Mode Selected. Try Again.\n')
+            logger.error('Invalid Mode Selected. Try Again. \n')
             mode_set = False
 
     with open(input_file, encoding='UTF-8') as f:
         users = csv.DictReader(f, delimiter=",", lineterminator="\n")
 
         for user in users:
-            print ("Adding {}".format(user['username']))
+            logger.debug('### ===== BEGIN USER ===== ###')
+            logger.debug(user)
+
             if mode == 1:
                 if user['username'] == "":
+                    logger.error("user doesn't have a username")
                     continue
                 user_to_add = client.get_input_entity(user['username'])
+                logger.debug("Adding @%s", user['username'])
             elif mode == 2:
                 try:
                     user_to_add = client.get_input_entity(int(user['user id']))
                 except:
-                    print("User ID", user['user id'], "is invalid")
+                    logger.error("User ID %s is invalid", user['user id'])
             else:
                 sys.exit("Invalid Mode Selected. Please Try Again.")
+            logger.debug(user_to_add)
 
             try:
                 if isChannel:
-                    client(InviteToChannelRequest(target_group_entity, [user_to_add]))
+                    updates = client(InviteToChannelRequest(target_group_entity, [user_to_add]))
+                    logger.debug(updates.stringify())
                 else:
-                    client(AddChatUserRequest(target_group_entity.chat_id, user_to_add, fwd_limit=1000000000))
+                    updates = client(AddChatUserRequest(target_group_entity.chat_id, user_to_add, fwd_limit=1000000000))
+                    logger.debug(updates.stringify())
                 wait_time = random.randrange(60, 300)
-                print("Waiting for", wait_time, "seconds...")
+                logger.debug("Waiting for %s seconds", wait_time)
                 time.sleep(wait_time)
-            except InputUserDeactivatedError:
-                print(user_to_add, "has been deactivated")
-            except UserNotMutualContactError:
-                print(user_to_add, "is not a mutual contact")
-            except UserPrivacyRestrictedError:
-                print('Sorry, the user restricted who can add them to chats in their privacy settings.')
-            except PeerFloodError:
-                print('Getting Flood Error from telegram. Script is stopping now. Please try again after some time.')
+            except (
+                    InputUserDeactivatedError,
+                    UserNotMutualContactError,
+                    UserPrivacyRestrictedError
+                   ) as e:
+                message = re.search('(?<=user).*', str(e)).group(0)
+                logger.error("%s: %s%s", e.__class__.__name__, user_to_add, message)
+            except PeerFloodError as e:
+                logger.error("%s: %s", e.__class__.__name__, e)
+                logger.info("to continue from the last position, run:\n\tpython3 %s %s %s %s %s",
+                    sys.argv[0],
+                    input_file,
+                    target_group.id,
+                    mode,
+                    user_add_count
+                )
                 exit(6)
-            except:
-                traceback.print_exc()
-                print("Unexpected Error")
+            except Exception as e:
+                logger.exception(e.__class__.__name__)
                 error_count += 1
                 if error_count > 10:
                     sys.exit('too many errors')
                 continue
 
+            logger.debug('### ===== END USER ===== ### \n')
+
 def scrape_users(target_group, client):
-    print('Scraping Members from', target_group.title)
+    logger.debug('Scraping Members from %s', target_group.title)
 
     sanitized_group_name = re.sub(' ', '-', str.lower(target_group.title).encode('ascii', 'ignore').decode('ascii').strip())
     if sanitized_group_name:
@@ -160,7 +185,7 @@ def scrape_users(target_group, client):
                 last_name= ""
             name= (first_name + ' ' + last_name).strip()
             writer.writerow([username,user.id,user.access_hash,name,target_group.title, target_group.id])      
-    print('Members scraped successfully.')
+    logger.debug('Members scraped successfully.')
 
 def printCSV(input_file):
     users = []
@@ -186,7 +211,7 @@ while not mode_set:
         mode = int(input("What do you want to do? "))
         mode_set = True
     except ValueError as e:
-        print('ValueError: invalid literal')
+        logger.error('ValueError: invalid literal')
         continue
 
 if mode == 1:
@@ -195,14 +220,14 @@ if mode == 1:
     scrape_users(target_group, client)
 elif mode == 2:
     if len(sys.argv) < 2:
-        print('did not get input CSV file\nplease pass the CSV file as argument to the script')
+        logger.error('did not get input CSV file as argument')
         exit(1)
     client = log_into_telegram()
     target_group = select_group()
     add_users_to_group(sys.argv[1], target_group, client)
 elif mode == 3:
     if len(sys.argv) < 2:
-        print('did not get input CSV file\nplease pass the CSV file as argument to the script')
+        logger.error('did not get input CSV file as argument')
         exit(1)
     printCSV(sys.argv[1])
 elif mode == 4:
