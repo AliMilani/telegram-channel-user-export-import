@@ -1,8 +1,3 @@
-from telethon.sync import TelegramClient
-from telethon.tl.functions.messages import GetDialogsRequest, AddChatUserRequest
-from telethon.tl.types import InputPeerEmpty, Chat, InputPeerChat, ChatForbidden, Channel, InputPeerChannel, ChannelForbidden
-from telethon.errors.rpcerrorlist import PeerFloodError, InputUserDeactivatedError, UserNotMutualContactError, UserPrivacyRestrictedError
-from telethon.tl.functions.channels import InviteToChannelRequest
 import sys
 import csv
 import traceback
@@ -10,6 +5,12 @@ import time
 import random
 import re
 import json
+
+from telethon.sync import TelegramClient
+from telethon.tl.functions.channels import InviteToChannelRequest
+from telethon.tl.functions.messages import GetDialogsRequest, AddChatUserRequest
+from telethon.tl.types import InputPeerEmpty, Chat, InputPeerChat, ChatForbidden, Channel, InputPeerChannel, ChannelForbidden
+from telethon.errors.rpcerrorlist import PeerFloodError, InputUserDeactivatedError, UserNotMutualContactError, UserPrivacyRestrictedError
 
 def log_into_telegram():
     credential_file = 'credentials.json' # Relative path of file which consists Telegram credentials - api_id, api_hash, phone
@@ -161,8 +162,7 @@ def scrape_users(target_group, client):
             writer.writerow([username,user.id,user.access_hash,name,target_group.title, target_group.id])      
     print('Members scraped successfully.')
 
-def printCSV():
-    input_file = sys.argv[1]
+def printCSV(input_file):
     users = []
     with open(input_file, encoding='UTF-8') as f:
         rows = csv.reader(f,delimiter=",",lineterminator="\n")
@@ -177,12 +177,17 @@ def printCSV():
             print(user)
     sys.exit('FINITO')
 
+mode = 0
+mode_set = False
 
-# print('Fetching Members...')
-# all_participants = []
-# all_participants = client.get_participants(target_group, aggressive=True)
-print('What do you want to do:')
-mode = int(input("Enter \n1-List users in a group\n2-Add users from CSV to Group (CSV must be passed as a parameter to the script\n3-Show CSV\n\nYour option:  "))
+while not mode_set:
+    try:
+        print('Actions\n1. Scrape users from group\n2. Add users from CSV to Group (CSV must be passed as argument)\n3. Show CSV\n4. Quit')
+        mode = int(input("What do you want to do? "))
+        mode_set = True
+    except ValueError as e:
+        print('ValueError: invalid literal')
+        continue
 
 if mode == 1:
     client = log_into_telegram()
@@ -196,4 +201,9 @@ elif mode == 2:
     target_group = select_group()
     add_users_to_group(sys.argv[1], target_group, client)
 elif mode == 3:
-    printCSV()
+    if len(sys.argv) < 2:
+        print('did not get input CSV file\nplease pass the CSV file as argument to the script')
+        exit(1)
+    printCSV(sys.argv[1])
+elif mode == 4:
+    exit()
