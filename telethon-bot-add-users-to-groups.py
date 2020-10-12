@@ -1,6 +1,6 @@
 from telethon.sync import TelegramClient
-from telethon.tl.functions.messages import GetDialogsRequest
-from telethon.tl.types import InputPeerEmpty, InputPeerChannel, InputPeerUser, ChatForbidden, ChannelForbidden
+from telethon.tl.functions.messages import GetDialogsRequest, AddChatUserRequest
+from telethon.tl.types import InputPeerEmpty, Chat, InputPeerChat, ChatForbidden, Channel, InputPeerChannel, ChannelForbidden
 from telethon.errors.rpcerrorlist import PeerFloodError, UserPrivacyRestrictedError
 from telethon.tl.functions.channels import InviteToChannelRequest
 import sys
@@ -42,7 +42,7 @@ def select_group():
             limit=chunk_size,
         ):
 
-        if dialog.is_group and dialog.is_channel and dialog.entity.megagroup:    # mega-group filter
+        if dialog.is_group:
             if not isinstance(dialog.entity, ChatForbidden) and not isinstance(dialog.entity, ChannelForbidden):
                 print(str(dialog_iterator) + '. ' + dialog.entity.title)
                 chats.append(dialog.entity)
@@ -54,56 +54,69 @@ def select_group():
     print('\n\nChosen group: ' + target_group.title)
     return target_group
 
-def add_users_to_group(client):
-    input_file = sys.argv[1]
-    users = []
-    with open(input_file, encoding='UTF-8') as f:
-        rows = csv.reader(f, delimiter=",", lineterminator="\n")
-        next(rows, None)
-        for row in rows:
-            user = {}
-            user['username'] = row[0]
-            try:
-                user['id'] = int(row[1])
-                user['access_hash'] = int(row[2])
-            except IndexError:
-                print ('users without id or access_hash')
-            users.append(user)
-
-    #random.shuffle(users)
-
-    target_group = select_group()
-    target_group_entity = InputPeerChannel(target_group.id, target_group.access_hash)
-
-    mode = int(input("Enter 1 to add by username or 2 to add by ID: "))
-
+def add_users_to_group(input_file, target_group, client):
     error_count = 0
+    mode_set = False
+    isChannel = False
 
-    for user in users:
+    # convert target_group to InputPeer
+    if isinstance(target_group, Chat):
+        target_group_entity = InputPeerChat(target_group.id)
+        isChannel = False
+    elif isinstance(target_group, Channel):
+        target_group_entity = InputPeerChannel(target_group.id, target_group.access_hash)
+        isChannel = True
+    else:
+        print(target_group.__class__.__name__, "is not a valid InputPeer")
+        exit(5)
+
+    while not mode_set:
         try:
+            print('Add By:\n1. username\n2. user ID ( requires access hash to be in CSV )')
+            mode = int(input('How do you want to add users? '))
+            mode_set = True
+        except ValueError:
+            print('ValueError: invalid literal\n')
+            continue
+
+        if mode not in [1, 2]:
+            print('Invalid Mode Selected. Try Again.\n')
+            mode_set = False
+
+    with open(input_file, encoding='UTF-8') as f:
+        users = csv.DictReader(f, delimiter=",", lineterminator="\n")
+
+        for user in users:
             print ("Adding {}".format(user['username']))
             if mode == 1:
                 if user['username'] == "":
                     continue
                 user_to_add = client.get_input_entity(user['username'])
             elif mode == 2:
-                user_to_add = InputPeerUser(user['id'], user['access_hash'])
+                user_to_add = client.get_input_entity(int(user['user id']))
             else:
                 sys.exit("Invalid Mode Selected. Please Try Again.")
-            client(InviteToChannelRequest(target_group_entity,[user_to_add]))
-            print("Waiting 60 Seconds...")
-            time.sleep(60)
-        except PeerFloodError:
-            print("Getting Flood Error from telegram. Script is stopping now. Please try again after some time.")
-        except UserPrivacyRestrictedError:
-            print("The user's privacy settings do not allow you to do this. Skipping.")
-        except:
-            traceback.print_exc()
-            print("Unexpected Error")
-            error_count += 1
-            if error_count > 10:
-                sys.exit('too many errors')
-            continue
+
+            try:
+                if isChannel:
+                    client(InviteToChannelRequest(target_group_entity, [user_to_add]))
+                else:
+                    client(AddChatUserRequest(target_group_entity.chat_id, user_to_add, fwd_limit=1000000000))
+                wait_time = random.randrange(60, 300)
+                print("Waiting for", wait_time, "seconds...")
+                time.sleep(wait_time)
+            except PeerFloodError:
+                print('Getting Flood Error from telegram. Script is stopping now. Please try again after some time.')
+                exit(6)
+            except UserPrivacyRestrictedError:
+                print('Sorry, the user restricted who can add them to chats in their privacy settings.')
+            except:
+                traceback.print_exc()
+                print("Unexpected Error")
+                error_count += 1
+                if error_count > 10:
+                    sys.exit('too many errors')
+                continue
 
 def scrape_users(target_group, client):
     print('Scraping Members from', target_group.title)
@@ -162,7 +175,11 @@ if mode == 1:
     target_group = select_group()
     scrape_users(target_group, client)
 elif mode == 2:
+    if len(sys.argv) < 2:
+        print('did not get input CSV file\nplease pass the CSV file as argument to the script')
+        exit(1)
     client = log_into_telegram()
-    add_users_to_group(client)
+    target_group = select_group()
+    add_users_to_group(sys.argv[1], target_group, client)
 elif mode == 3:
     printCSV()

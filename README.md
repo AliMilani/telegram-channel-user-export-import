@@ -25,11 +25,16 @@ Users can be added using:
 - **Username**: Gets temporarily banned with less requests.
 - **User ID**: Gets temporarily banned with more requests.
 
-> Temporarily bans last for up to a day in my experience.
+> Temporary restrictions may last for up to a day.
 
-Adding users by Username expects a CSV file with one username per line.
-Adding users by User ID expects a CSV file such as: `username,user_id,user_access_hash`
+The script expects a comma-separated value (CSV) file with input values ( one per line ).
 
-> No headers are expected in the CSV files
+The CSV file **MUST** have a header with at least one of the following fields
+- `username` for adding by username
+- `user id` for adding by user ID
+
+Header values are compatible with the CSV that is generated with the same script.
+
+Note : The values for the header is hard-coded in the application and is case-sensitive. The values must be in lower-case only
 
 Once you have your CSV prepared, just follow the instructions in the script.
