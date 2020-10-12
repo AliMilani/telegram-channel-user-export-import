@@ -1,7 +1,7 @@
 from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import GetDialogsRequest, AddChatUserRequest
 from telethon.tl.types import InputPeerEmpty, Chat, InputPeerChat, ChatForbidden, Channel, InputPeerChannel, ChannelForbidden
-from telethon.errors.rpcerrorlist import PeerFloodError, UserPrivacyRestrictedError
+from telethon.errors.rpcerrorlist import PeerFloodError, InputUserDeactivatedError, UserNotMutualContactError, UserPrivacyRestrictedError
 from telethon.tl.functions.channels import InviteToChannelRequest
 import sys
 import csv
@@ -48,9 +48,16 @@ def select_group():
                 chats.append(dialog.entity)
                 dialog_iterator += 1
 
+    try:
+        g_index = int(input("Choose group: "))
+        target_group = chats[g_index]
+    except IndexError as e:
+        print(e.__class__.__name__, e)
+        exit(4)
+    except ValueError:
+        print('ValueError: invalid literal')
+        exit(4)
 
-    g_index = int(input("Choose group: "))
-    target_group = chats[g_index]
     print('\n\nChosen group: ' + target_group.title)
     return target_group
 
@@ -93,7 +100,10 @@ def add_users_to_group(input_file, target_group, client):
                     continue
                 user_to_add = client.get_input_entity(user['username'])
             elif mode == 2:
-                user_to_add = client.get_input_entity(int(user['user id']))
+                try:
+                    user_to_add = client.get_input_entity(int(user['user id']))
+                except:
+                    print("User ID", user['user id'], "is invalid")
             else:
                 sys.exit("Invalid Mode Selected. Please Try Again.")
 
@@ -105,11 +115,15 @@ def add_users_to_group(input_file, target_group, client):
                 wait_time = random.randrange(60, 300)
                 print("Waiting for", wait_time, "seconds...")
                 time.sleep(wait_time)
+            except InputUserDeactivatedError:
+                print(user_to_add, "has been deactivated")
+            except UserNotMutualContactError:
+                print(user_to_add, "is not a mutual contact")
+            except UserPrivacyRestrictedError:
+                print('Sorry, the user restricted who can add them to chats in their privacy settings.')
             except PeerFloodError:
                 print('Getting Flood Error from telegram. Script is stopping now. Please try again after some time.')
                 exit(6)
-            except UserPrivacyRestrictedError:
-                print('Sorry, the user restricted who can add them to chats in their privacy settings.')
             except:
                 traceback.print_exc()
                 print("Unexpected Error")
