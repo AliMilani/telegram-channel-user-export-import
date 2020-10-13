@@ -40,6 +40,8 @@ def log_into_telegram():
     return client
 
 def select_group():
+    global client
+
     chats = []
     last_date = None
     chunk_size = 200
@@ -71,7 +73,9 @@ def select_group():
     print('\n\nChosen group: ' + target_group.title)
     return target_group
 
-def add_users_to_group(input_file, target_group, client, add_mode = 0, start_index = 0):
+def add_users_to_group(input_file, target_group, add_mode = 0, start_index = 0):
+    global client
+
     mode = 0
     error_count = 0
     user_add_count = 0
@@ -197,7 +201,9 @@ def add_users_to_group(input_file, target_group, client, add_mode = 0, start_ind
 
             logger.debug('### ===== END USER ===== ### \n')
 
-def export_users(target_group, client):
+def export_users(target_group):
+    global client
+
     logger.debug('Scraping Members from %s', target_group.title)
 
     sanitized_group_name = re.sub(' ', '-', str.lower(target_group.title).encode('ascii', 'ignore').decode('ascii').strip())
@@ -261,7 +267,7 @@ while not mode_set:
 if mode == 1:
     client = log_into_telegram()
     target_group = select_group()
-    export_users(target_group, client)
+    export_users(target_group)
 elif mode == 2:
     add_mode = 0
     start_index = 0
@@ -285,7 +291,7 @@ elif mode == 2:
     if len(sys.argv) > 4:
         start_index = int(sys.argv[4])
 
-    add_users_to_group(input_file, target_group, client, add_mode, start_index)
+    add_users_to_group(input_file, target_group, add_mode, start_index)
 elif mode == 3:
     if len(sys.argv) < 2:
         logger.error('did not get input CSV file as argument')
