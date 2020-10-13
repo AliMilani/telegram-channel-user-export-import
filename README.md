@@ -37,7 +37,9 @@ Header values are compatible with the CSV that is generated with the same script
 
 Note : The values for the header is hard-coded in the application and is case-sensitive. The values must be in lower-case only
 
-Once you have your CSV prepared, just follow the instructions in the script.
+#### Auto-detect add mode
+
+The script is capable of auto-detecting the add mode if the CSV file has only one column and the header is appropriately named as mentioned above
 
 #### Resume capability
 

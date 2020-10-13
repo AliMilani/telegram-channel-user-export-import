@@ -99,12 +99,34 @@ def add_users_to_group(input_file, target_group, client, add_mode = 0, start_ind
 
     while not mode_set:
         try:
-            print('Add By:\n1. username\n2. user ID ( requires access hash to be in CSV )')
+            print('Add By:\n1. username\n2. user ID ( requires access hash to be in CSV )\n3. Auto-detect from CSV header')
             mode = int(input('How do you want to add users? '))
             mode_set = True
         except:
             logger.error('ValueError: invalid literal \n')
             continue
+
+        # auto-detect mode from CSV header
+        if mode == 3:
+            csv_header_fieldnames = csv.DictReader(
+                                        open(input_file, encoding='UTF-8'),
+                                        delimiter=",",
+                                        lineterminator="\n",
+                                        skipinitialspace=True
+                                    ).fieldnames
+            logger.debug(csv_header_fieldnames)
+            if len(csv_header_fieldnames) > 1:
+                logger.error('CSV file has more than one column. Cannot auto-detect add mode. \n')
+                mode_set = False
+                continue
+            elif csv_header_fieldnames[0] == 'username':
+                mode = 1
+            elif csv_header_fieldnames[0] == 'user id':
+                mode = 2
+            else:
+                logger.error('Could not detect add mode from CSV file. Try again. \n')
+                mode_set = False
+                continue
 
         if mode not in [1, 2]:
             logger.error('Invalid Mode Selected. Try Again. \n')
