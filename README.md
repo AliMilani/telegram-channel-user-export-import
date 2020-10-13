@@ -4,6 +4,8 @@
 
 ### Install dependencies
 
+This script requires [telethon](https://pypi.org/project/Telethon/) ( [github](https://github.com/LonamiWebs/Telethon) ) to run.
+
 You'd need python3 and pip3 installed and available in your PATH.
 
 Run `pip3 install -r requirements.txt` from the projects root directory.
@@ -16,10 +18,23 @@ Run `pip3 install -r requirements.txt` from the projects root directory.
    The filename has to be exactly `credentials.json` because the name is hard-coded into the script.
 3. Add the credentials obtained in Step 1 to `credentials.json`
 
-### Export users
-Just follow the instructions in the script after running it from your the shell.
+### Running the Script
 
-### Add users to groups
+The script is mostly interactive. It can be started in the most basic form :
+```bash
+python3 telethon-bot-add-users-to-groups.py
+```
+
+The script has 3 main features :
+- Export users from group
+- Add users to group
+- print CSV
+
+#### Export users
+
+The export feature writes a comma-separated values (CSV) file with the filename of the form `<group-name>-members.csv`. The CSV can then later be used as an input file to the add users or print CSV features.
+
+#### Add users to groups
 
 Users can be added using:
 - **Username**: Gets temporarily banned with less requests.
@@ -27,7 +42,7 @@ Users can be added using:
 
 > Temporary restrictions may last for up to a day.
 
-The script expects a comma-separated value (CSV) file with input values ( one per line ).
+The script expects a CSV file with input values ( one per line ).
 
 The CSV file **MUST** have a header with at least one of the following fields
 - `username` for adding by username
@@ -37,11 +52,11 @@ Header values are compatible with the CSV that is generated with the same script
 
 Note : The values for the header is hard-coded in the application and is case-sensitive. The values must be in lower-case only
 
-#### Auto-detect add mode
+##### Auto-detect add mode
 
 The script is capable of auto-detecting the add mode if the CSV file has only one column and the header is appropriately named as mentioned above
 
-#### Resume capability
+##### Resume capability
 
 The script can also smartly resume from a certain offset point. This is useful when resuming operation after a cooldown period of a `PeerFloodError`. The script prints the command after handling a `PeerFloodError`. It looks similar to :
 ```

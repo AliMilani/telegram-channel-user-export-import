@@ -197,7 +197,7 @@ def add_users_to_group(input_file, target_group, client, add_mode = 0, start_ind
 
             logger.debug('### ===== END USER ===== ### \n')
 
-def scrape_users(target_group, client):
+def export_users(target_group, client):
     logger.debug('Scraping Members from %s', target_group.title)
 
     sanitized_group_name = re.sub(' ', '-', str.lower(target_group.title).encode('ascii', 'ignore').decode('ascii').strip())
@@ -261,7 +261,7 @@ while not mode_set:
 if mode == 1:
     client = log_into_telegram()
     target_group = select_group()
-    scrape_users(target_group, client)
+    export_users(target_group, client)
 elif mode == 2:
     add_mode = 0
     start_index = 0
