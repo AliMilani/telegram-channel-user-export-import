@@ -38,3 +38,20 @@ Header values are compatible with the CSV that is generated with the same script
 Note : The values for the header is hard-coded in the application and is case-sensitive. The values must be in lower-case only
 
 Once you have your CSV prepared, just follow the instructions in the script.
+
+#### Resume capability
+
+The script can also smartly resume from a certain offset point. This is useful when resuming operation after a cooldown period of a `PeerFloodError`. The script prints the command after handling a `PeerFloodError`. It looks similar to :
+```
+python3 telethon-bot-add-users-to-groups.py members.csv 1234567890 1 50
+```
+where the arguments correspond to :
+
+```
+argv[1] => input_file      | input CSV file
+argv[2] => target_group.id | ID of group to add users
+argv[3] => add_mode        | add by [1]. username or [2]. user ID
+argv[4] => start_index     | offset to restart adding users
+```
+
+While the script is interactive by default, using this argument structure can trigger a non-interactive automatic add mode with the given parameters.

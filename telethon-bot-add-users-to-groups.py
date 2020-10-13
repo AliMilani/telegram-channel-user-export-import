@@ -15,7 +15,7 @@ from telethon.errors.rpcerrorlist import PeerFloodError, InputUserDeactivatedErr
 # Set up logging
 import logging
 logger = logging.getLogger('telethon-add-users-to-groups')
-# logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 format = logging.Formatter('%(levelname)s | %(asctime)s | %(message)s')
 ch.setFormatter(format)
@@ -71,10 +71,20 @@ def select_group():
     print('\n\nChosen group: ' + target_group.title)
     return target_group
 
-def add_users_to_group(input_file, target_group, client):
+def add_users_to_group(input_file, target_group, client, add_mode = 0, start_index = 0):
+    mode = 0
     error_count = 0
+    user_add_count = 0
+
     mode_set = False
     isChannel = False
+
+    # validate mode when in auto-add mode
+    if add_mode in [1, 2]:
+        mode = int(add_mode)
+        mode_set = True
+    elif add_mode != 0:
+        logger.error('Invalid Add Mode')
 
     # convert target_group to InputPeer
     if isinstance(target_group, Chat):
@@ -101,7 +111,13 @@ def add_users_to_group(input_file, target_group, client):
             mode_set = False
 
     with open(input_file, encoding='UTF-8') as f:
-        users = csv.DictReader(f, delimiter=",", lineterminator="\n")
+        # convert csv dict into a list
+        # to index it by an integer
+        # to be able to resume from arbitrary points
+        # https://stackoverflow.com/a/55790863
+        users = list(csv.DictReader(f, delimiter=",", lineterminator="\n"))
+        for i in range(start_index, len(users)):
+            user = users[i]
 
         for user in users:
             logger.debug('### ===== BEGIN USER ===== ###')
@@ -129,6 +145,7 @@ def add_users_to_group(input_file, target_group, client):
                 else:
                     updates = client(AddChatUserRequest(target_group_entity.chat_id, user_to_add, fwd_limit=1000000000))
                     logger.debug(updates.stringify())
+                user_add_count += 1
                 wait_time = random.randrange(60, 300)
                 logger.debug("Waiting for %s seconds", wait_time)
                 time.sleep(wait_time)
@@ -205,6 +222,11 @@ def printCSV(input_file):
 mode = 0
 mode_set = False
 
+if 2 < len(sys.argv) <= 5:
+    logger.debug('got more than 1 argument; auto-selecting add mode')
+    mode = 2
+    mode_set = True
+
 while not mode_set:
     try:
         print('Actions\n1. Scrape users from group\n2. Add users from CSV to Group (CSV must be passed as argument)\n3. Show CSV\n4. Quit')
@@ -219,12 +241,29 @@ if mode == 1:
     target_group = select_group()
     scrape_users(target_group, client)
 elif mode == 2:
+    add_mode = 0
+    start_index = 0
+
     if len(sys.argv) < 2:
         logger.error('did not get input CSV file as argument')
         exit(1)
+    elif len(sys.argv) > 5:
+        logger.warning('too many arguments. using only first 5')
+
+    input_file = sys.argv[1]
+
     client = log_into_telegram()
-    target_group = select_group()
-    add_users_to_group(sys.argv[1], target_group, client)
+    if len(sys.argv) > 2:
+        target_group = client.get_entity(int(sys.argv[2]))
+    else:
+        target_group = select_group()
+
+    if len(sys.argv) > 3:
+        add_mode = int(sys.argv[3])
+    if len(sys.argv) > 4:
+        start_index = int(sys.argv[4])
+
+    add_users_to_group(input_file, target_group, client, add_mode, start_index)
 elif mode == 3:
     if len(sys.argv) < 2:
         logger.error('did not get input CSV file as argument')
