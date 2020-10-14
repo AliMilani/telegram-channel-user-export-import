@@ -189,7 +189,7 @@ def add_users_to_group(input_file, target_group, add_mode = 0, start_index = 0):
                     input_file,
                     target_group.id,
                     mode,
-                    user_add_count
+                    start_index + user_add_count
                 )
                 exit(6)
             except Exception as e:
