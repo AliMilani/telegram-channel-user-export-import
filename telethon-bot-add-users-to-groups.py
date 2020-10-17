@@ -151,7 +151,7 @@ def add_users_to_group(input_file, target_group, add_mode = 0, start_index = 0):
 
             if mode == 1:
                 if user['username'] == "":
-                    logger.error("user doesn't have a username")
+                    logger.warning("%s doesn't have a username", user)
                     continue
                 user_to_add = client.get_input_entity(user['username'])
                 logger.debug("Adding @%s", user['username'])
