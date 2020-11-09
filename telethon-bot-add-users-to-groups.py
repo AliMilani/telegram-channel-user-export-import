@@ -145,7 +145,6 @@ def add_users_to_group(input_file, target_group, add_mode = 0, start_index = 0):
         for i in range(start_index, len(users)):
             user = users[i]
 
-        for user in users:
             logger.debug('### ===== BEGIN USER ===== ###')
             logger.debug(user)
 
